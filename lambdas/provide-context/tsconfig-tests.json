@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2017",
+    "noImplicitAny": true,
+    "preserveConstEnums": true,
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "typeRoots": [
+      "node_modules/@types"
+    ],
+    "types":[
+      "node","jest"
+    ]
+  },
+  "paths": {
+    "*": [
+      "node_modules/*",
+      "src/types/*"
+    ]
+  }
+}

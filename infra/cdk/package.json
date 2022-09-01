@@ -1,0 +1,35 @@
+{
+  "name": "@aiaa/cfn",
+  "version": "0.1.0",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "@aiaa-lambda/initialize-repository": "^1.0.0",
+    "@aiaa-lambda/provide-context": "^1.0.0",
+    "@aiaa-lambda/push-policies-to-repository": "^1.0.0",
+    "@types/jest": "^28.1.8",
+    "@types/node": "18.7.13",
+    "aws-cdk-lib": "2.39.0",
+    "constructs": "^10.1.87",
+    "esbuild": "^0.15.5",
+    "jest": "^28.1.3",
+    "ts-jest": "^28.0.8",
+    "ts-node": "^10.9.1",
+    "typescript": "~4.8.2"
+  },
+  "peerDependencies": {
+    "aws-cdk-lib": "2.39.0",
+    "constructs": "^10.1.87",
+    "source-map-support": "^0.5.21"
+  },
+  "dependencies": {
+    "@aws-sdk/client-codecommit": "^3.159.0",
+    "@aws-sdk/client-s3": "^3.159.0"
+  }
+}
