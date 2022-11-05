@@ -1,8 +1,12 @@
-# Automated IAM Access Analyzer Role Generator
+# Automated IAM Access Analyzer Role Policy Generator
 
-Automated IAM Access Analyzer Role Generator is a sample implementation of a periodical monitoring of an AWS IAM Role in order to achieve a continuous permission refinement of that role. The goal of the solution is to present an operational, continuous least-privilege approach for a particular role in order to provide for security proliferation in an ongoing manner.
+Automated IAM Access Analyzer Role Policy Generator is a sample implementation of a periodical monitoring of an AWS IAM Role in order to achieve a continuous permission refinement of that role. The goal of the solution is to present an operational, continuous least-privilege approach for a particular role in order to provide for security proliferation in an ongoing manner.
 
-Automated IAM Access Analyzer Role Generator relies on the [AWS CloudTrail](https://aws.amazon.com/cloudtrail/), [AWS IAM Access Analyzer for policy generation](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-generation.html), and [AWS Step Functions](https://aws.amazon.com/step-functions/) for orchestrating the overall process.
+The target architecture of the of the implementation is presented in the diagram below. Having an example IAM Role *Learning* that is to be periodically scanned, the implemented solution creates a CodeCommit entry with the result being the output of the IAM Access Analyzer's policy generation. Then the administrators of the account in which the solution works can create an updated IAM Role *Operations* that has the permissions defined in the output.
+
+![Target Architecture of the Automated IAM Access Analyzer Role Policy Generator](images/aiaarg-target-architecture-01.png)
+
+Automated IAM Access Analyzer Role Policy Generator relies on the [AWS CloudTrail](https://aws.amazon.com/cloudtrail/), [AWS IAM Access Analyzer for policy generation](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-generation.html), and [AWS Step Functions](https://aws.amazon.com/step-functions/) for orchestrating the overall process.
 
 ## Structure of the solution
 
@@ -24,7 +28,7 @@ These stack creation implementations rely on the *worker* lambdas:
 
 
 ```
-npm install && lerna bootstrap
+npm install && npm run bootstrap
 ```
 
 4. Test & build the Lambda code
