@@ -18,6 +18,8 @@
   },
   "scripts": {
     "prepare": "husky install",
+    "bootstrap": "lerna bootstrap --include-dependencies",
+    "clean": "lerna clean --yes",
     "build:code": "lerna run compile --scope @aiaa-lambda/*",
     "test:code": "lerna run test --scope @aiaa-lambda/*",
     "pack:code": "lerna run build:prod --scope @aiaa-lambda/*",
