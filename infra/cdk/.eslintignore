@@ -1,0 +1,10 @@
+node_modules
+cdk.out
+.eslintrc.js
+
+# ignore the tests
+test
+
+# ignore compiled files
+*.d.ts
+*.js

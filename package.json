@@ -2,12 +2,38 @@
   "name": "root",
   "private": true,
   "devDependencies": {
-    "lerna": "^5.5.2"
+    "@commitlint/cli": "17.2.0",
+    "@commitlint/config-angular": "17.2.0",
+    "@commitlint/config-conventional": "17.2.0",
+    "lerna": "^6.0.1",
+    "husky": "^8.0.1",
+    "lint-staged": "13.0.3",
+    "prettier": "2.7.1"
   },
   "license": "Apache-2.0",
   "author": {
     "name": "Amazon Web Services",
     "url": "https://aws.amazon.com",
     "organization": true
+  },
+  "scripts": {
+    "prepare": "husky install",
+    "build:code": "lerna run compile --scope @aiaa-lambda/*",
+    "test:code": "lerna run test --scope @aiaa-lambda/*",
+    "pack:code": "lerna run build:prod --scope @aiaa-lambda/*",
+    "build:infra": "lerna run build --scope @aiaa/*",
+    "lint": "lerna run lint",
+    "lint:fix": "lerna run lint:fix"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "prettier --write",
+      "eslint --cache --fix"
+    ]
   }
 }

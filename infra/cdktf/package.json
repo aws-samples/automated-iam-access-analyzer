@@ -14,24 +14,35 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "upgrade": "npm i cdktf@latest cdktf-cli@latest",
-    "upgrade:next": "npm i cdktf@next cdktf-cli@next"
+    "upgrade:next": "npm i cdktf@next cdktf-cli@next",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "npm run lint -- --fix"
   },
   "engines": {
     "node": ">=12.16"
   },
   "dependencies": {
-    "@cdktf/provider-aws": "^9.0.46",
-    "cdktf": "^0.12.2",
-    "constructs": "^10.1.115"
+    "@cdktf/provider-aws": "^10.0.11",
+    "@cdktf/provider-random": "^3.0.11",
+    "cdktf": "^0.13.3",
+    "constructs": "^10.1.150"
   },
   "devDependencies": {
     "@aiaa-lambda/initialize-repository": "^1.0.0",
     "@aiaa-lambda/provide-context": "^1.0.0",
     "@aiaa-lambda/push-policies-to-repository": "^1.0.0",
-    "@types/jest": "^29.0.3",
-    "@types/node": "^18.7.23",
-    "jest": "^29.1.0",
-    "ts-jest": "^29.0.2",
+    "@types/jest": "^29.2.2",
+    "@types/node": "^18.11.9",
+    "@typescript-eslint/eslint-plugin": "5.42.0",
+    "@typescript-eslint/parser": "5.42.0",
+    "eslint": "8.26.0",
+    "eslint-config-airbnb-base": "15.0.0",
+    "eslint-config-prettier": "8.5.0",
+    "eslint-plugin-import": "2.26.0",
+    "eslint-plugin-jest": "27.1.4",
+    "eslint-plugin-prettier": "4.2.1",
+    "jest": "^29.2.2",
+    "ts-jest": "^29.0.3",
     "ts-node": "^10.9.1",
     "typescript": "^4.8.4"
   }

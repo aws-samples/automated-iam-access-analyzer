@@ -1,60 +1,72 @@
-import * as path from "path";
-import { Construct } from "constructs";
-import { App, TerraformStack, TerraformOutput, TerraformAsset, AssetType, TerraformVariable } from "cdktf";
-import { AwsProvider, iam, lambdafunction, s3, sfn, eventbridge, codecommit } from "@cdktf/provider-aws";
-import * as random from "./.gen/providers/random";
+import * as path from 'path';
+import { Construct } from 'constructs';
+import { App, TerraformStack, TerraformOutput, TerraformAsset, AssetType, TerraformVariable } from 'cdktf';
+import { RandomProvider } from '@cdktf/provider-random/lib/provider';
+import { Id } from '@cdktf/provider-random/lib/id';
+import { AwsProvider } from '@cdktf/provider-aws/lib/provider';
+import { CodecommitRepository } from '@cdktf/provider-aws/lib/codecommit-repository';
+import { S3Bucket } from '@cdktf/provider-aws/lib/s3-bucket';
+import { LambdaInvocation } from '@cdktf/provider-aws/lib/lambda-invocation';
+import { IamRole, IamRoleInlinePolicy } from '@cdktf/provider-aws/lib/iam-role';
+import { SfnStateMachine } from '@cdktf/provider-aws/lib/sfn-state-machine';
+import { CloudwatchEventRule } from '@cdktf/provider-aws/lib/cloudwatch-event-rule';
+import { CloudwatchEventTarget } from '@cdktf/provider-aws/lib/cloudwatch-event-target';
+import { LambdaPermission } from '@cdktf/provider-aws/lib/lambda-permission';
+import { S3BucketNotification } from '@cdktf/provider-aws/lib/s3-bucket-notification';
+import { LambdaFunction, LambdaFunctionEnvironment } from '@cdktf/provider-aws/lib/lambda-function';
+import { S3BucketObject } from '@cdktf/provider-aws/lib/s3-bucket-object';
+import { IamRolePolicyAttachment } from '@cdktf/provider-aws/lib/iam-role-policy-attachment';
 
 interface LambdaFunctionConfig {
-  path: string,
-  handler: string,
-  runtime: string,
-  version: string,
-};
+  path: string;
+  handler: string;
+  runtime: string;
+  version: string;
+}
 
 interface S3AssetConfig {
-  path: string,
-  version: string
+  path: string;
+  version: string;
 }
 
 interface AutomatedIamAccessAnalyzerConfig {
   repo: {
-    allowFile: S3AssetConfig,
-    denyFile: S3AssetConfig
-  }
+    allowFile: S3AssetConfig;
+    denyFile: S3AssetConfig;
+  };
   lambdas: {
-    provideContext: LambdaFunctionConfig,
-    pushPoliciesToRepositoryConfig: LambdaFunctionConfig,
-    initializeRepositoryConfig: LambdaFunctionConfig
-  }
+    provideContext: LambdaFunctionConfig;
+    pushPoliciesToRepositoryConfig: LambdaFunctionConfig;
+    initializeRepositoryConfig: LambdaFunctionConfig;
+  };
 }
 
 const lambdaRolePolicy = {
-  Version: "2012-10-17",
+  Version: '2012-10-17',
   Statement: [
     {
-      Action: "sts:AssumeRole",
+      Action: 'sts:AssumeRole',
       Principal: {
-        Service: "lambda.amazonaws.com"
+        Service: 'lambda.amazonaws.com',
       },
-      Effect: "Allow",
-      Sid: ""
-    }
-  ]
+      Effect: 'Allow',
+      Sid: '',
+    },
+  ],
 };
 
 const sfnRolePolicy = {
-  Version: "2012-10-17",
+  Version: '2012-10-17',
   Statement: [
     {
-      Effect: "Allow",
+      Effect: 'Allow',
       Principal: {
-        Service: "states.amazonaws.com"
+        Service: 'states.amazonaws.com',
       },
-      Action: "sts:AssumeRole"
-    }
-  ]
+      Action: 'sts:AssumeRole',
+    },
+  ],
 };
-
 
 class AutomatedIamAccessAnalyzerStack extends TerraformStack {
   constructor(scope: Construct, name: string, config: AutomatedIamAccessAnalyzerConfig) {
@@ -62,71 +74,71 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
 
     const accountId = new TerraformVariable(this, 'accountId', {
       type: 'string',
-      description: 'The AWS account id to which the stack is to be deployed'
+      description: 'The AWS account id to which the stack is to be deployed',
     });
 
     const region = new TerraformVariable(this, 'region', {
       type: 'string',
-      description: 'The AWS region to which the stack is to be deployed'
+      description: 'The AWS region to which the stack is to be deployed',
     });
 
     const sched = new TerraformVariable(this, 'schedule', {
       type: 'string',
       description: 'The schedule to trigger the Automated IAM Access Analyzer',
-      default: 'cron(0 18 ? * MON-FRI *)'
+      default: 'cron(0 18 ? * MON-FRI *)',
     });
 
     const trailLookBackDays = new TerraformVariable(this, 'trailLookBack', {
       type: 'number',
       description: 'The number of days of history to analyze the specified trail',
-      default: 90
+      default: 90,
     });
 
     const roleArns = new TerraformVariable(this, 'roleArns', {
       type: 'string',
-      description: 'A list of role arns'
+      description: 'A list of role arns',
     });
 
     const trailArn = new TerraformVariable(this, 'trailArn', {
       type: 'string',
-      description: 'The Amazon CloudTrail trail to work with when monitoring permission usage'
+      description: 'The Amazon CloudTrail trail to work with when monitoring permission usage',
     });
 
-    new AwsProvider(this, "aws", {
-      region: region.stringValue
+    new AwsProvider(this, 'aws', {
+      region: region.stringValue,
     });
 
-    new random.RandomProvider(this, 'random', {});
+    new RandomProvider(this, 'random', {});
 
-    const repoId = new random.Id(this, 'policy-repo-id', {
-      byteLength: 8
+    const repoId = new Id(this, 'policy-repo-id', {
+      byteLength: 8,
     });
-    
+
     const mainBranchName = 'main';
-    
-    const repo = new codecommit.CodecommitRepository(this, 'policy-repo', {
+
+    const repo = new CodecommitRepository(this, 'policy-repo', {
       repositoryName: `aiaa-policy-repo-${repoId.hex}`,
       defaultBranch: mainBranchName,
-      description: 'A repository for polished policies in the Automated IAM '
+      description: 'A repository for polished policies in the Automated IAM ',
     });
 
-    const resourcesBucketSuffix = new random.Id(this, 'resources-bucket-suffix', {
-      byteLength: 8
+    const resourcesBucketSuffix = new Id(this, 'resources-bucket-suffix', {
+      byteLength: 8,
     });
 
-    const resourcesBucket = new s3.S3Bucket(this, 'resources', {
-      bucket: `aiaa-resources-${resourcesBucketSuffix.hex}`
+    const resourcesBucket = new S3Bucket(this, 'resources', {
+      bucket: `aiaa-resources-${resourcesBucketSuffix.hex}`,
     });
 
-    const dataBucketSuffix = new random.Id(this, 'data-bucket-suffix', {
-      byteLength: 8
+    const dataBucketSuffix = new Id(this, 'data-bucket-suffix', {
+      byteLength: 8,
     });
 
-    const dataBucket = new s3.S3Bucket(this, 'data-bucket', {
+    const dataBucket = new S3Bucket(this, 'data-bucket', {
       bucket: `aiaa-data-${dataBucketSuffix.hex}`,
       versioning: {
-        enabled: true
-      }
+        enabled: true,
+      },
     });
 
     const pushPoliciesToRepoFunc = this.setupLambda(this, 'aiaa-push-policies-to-repo', {
@@ -136,46 +148,49 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
         variables: {
           CODECOMMIT_REPO_NAME: repo.repositoryName,
           CODECOMMIT_TARGET_BRANCH_NAME: mainBranchName,
-          CODECOMMIT_REPO_FOLDER_PATH: '/'
-        }
+          CODECOMMIT_REPO_FOLDER_PATH: '/',
+        },
       },
-      inlinePolicy: [{
-        name: 'PolicyRepoAccess',
-        policy: JSON.stringify({
-          Version: '2012-10-17',
-          Statement: [{
-            Effect: 'Allow',
-            Action: [
-              'codecommit:GetBranch',
-              'codecommit:CreateCommit',
-              'codecommit:GetFile',
-              'codecommit:PutFile'
+      inlinePolicy: [
+        {
+          name: 'PolicyRepoAccess',
+          policy: JSON.stringify({
+            Version: '2012-10-17',
+            Statement: [
+              {
+                Effect: 'Allow',
+                Action: ['codecommit:GetBranch', 'codecommit:CreateCommit', 'codecommit:GetFile', 'codecommit:PutFile'],
+                Resource: repo.arn,
+              },
             ],
-            Resource: repo.arn
-          }]
-        })
-      }, {
-        name: 'DataBucketAccess',
-        policy: JSON.stringify({
-          Version: '2012-10-17',
-          Statement: [{
-            Effect: 'Allow',
-            Action: [
-              's3:GetObject*',
-              's3:GetBucket*',
-              's3:List*'
+          }),
+        },
+        {
+          name: 'DataBucketAccess',
+          policy: JSON.stringify({
+            Version: '2012-10-17',
+            Statement: [
+              {
+                Effect: 'Allow',
+                Action: ['s3:GetObject*', 's3:GetBucket*', 's3:List*'],
+                Resource: [dataBucket.arn, `${dataBucket.arn}/*`],
+              },
             ],
-            Resource: [
-              dataBucket.arn,
-              `${dataBucket.arn}/*`
-            ]
-          }]
-        })
-      }]
+          }),
+        },
+      ],
     });
 
-    const allowFileObject = this.pushS3Object(this, 'allowFile', { assetConfig: config.repo.allowFile, bucket: resourcesBucket.bucket, contentType: 'application/json' })
-    const denyFileObject = this.pushS3Object(this, 'denyFile', { assetConfig: config.repo.denyFile, bucket: resourcesBucket.bucket, contentType: 'application/json' });
+    const allowFileObject = this.pushS3Object(this, 'allowFile', {
+      assetConfig: config.repo.allowFile,
+      bucket: resourcesBucket.bucket,
+      contentType: 'application/json',
+    });
+    const denyFileObject = this.pushS3Object(this, 'denyFile', {
+      assetConfig: config.repo.denyFile,
+      bucket: resourcesBucket.bucket,
+      contentType: 'application/json',
+    });
 
     const initializeRepositoryFunc = this.setupLambda(this, 'aiaa-initialize-repo', {
       lambda: config.lambdas.initializeRepositoryConfig,
@@ -187,44 +202,45 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
           CODECOMMIT_REPO_FOLDER_PATH: '/',
           BUCKET_NAME: resourcesBucket.bucket,
           ALLOW_FILE_KEY: allowFileObject.key,
-          DENY_FILE_KEY: denyFileObject.key
-        }
+          DENY_FILE_KEY: denyFileObject.key,
+        },
       },
-      inlinePolicy: [{
-        name: 'PolicyRepoAccess',
-        policy: JSON.stringify({
-          Version: '2012-10-17',
-          Statement: [{
-            Effect: 'Allow',
-            Action: [
-              'codecommit:ListBranches',
-              'codecommit:CreateCommit'
+      inlinePolicy: [
+        {
+          name: 'PolicyRepoAccess',
+          policy: JSON.stringify({
+            Version: '2012-10-17',
+            Statement: [
+              {
+                Effect: 'Allow',
+                Action: ['codecommit:ListBranches', 'codecommit:CreateCommit'],
+                Resource: repo.arn,
+              },
             ],
-            Resource: repo.arn
-          }]
-        })
-      },
-      {
-        name: 'AssetsBucketAccess',
-        policy: JSON.stringify({
-          Version: '2012-10-17',
-          Statement: [{
-            Effect: 'Allow',
-            Action: [
-              's3:GetObject*',
+          }),
+        },
+        {
+          name: 'AssetsBucketAccess',
+          policy: JSON.stringify({
+            Version: '2012-10-17',
+            Statement: [
+              {
+                Effect: 'Allow',
+                Action: ['s3:GetObject*'],
+                Resource: [
+                  `${resourcesBucket.arn}/${allowFileObject.key}`,
+                  `${resourcesBucket.arn}/${denyFileObject.key}`,
+                ],
+              },
             ],
-            Resource: [
-              `${resourcesBucket.arn}/${allowFileObject.key}`,
-              `${resourcesBucket.arn}/${denyFileObject.key}`
-            ]
-          }]
-        })
-      }]
+          }),
+        },
+      ],
     });
 
-    new lambdafunction.LambdaInvocation(this, 'initialize-repo-invocation', {
+    new LambdaInvocation(this, 'initialize-repo-invocation', {
       functionName: initializeRepositoryFunc.functionName,
-      input: JSON.stringify({})
+      input: JSON.stringify({}),
     });
 
     const provideContextFunc = this.setupLambda(this, 'aiaa-provide-context', {
@@ -232,127 +248,115 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
       bucket: resourcesBucket.bucket,
       environment: {
         variables: {
-          DAYS: `${trailLookBackDays.numberValue}`
-        }
-      }
+          DAYS: `${trailLookBackDays.numberValue}`,
+        },
+      },
     });
 
-    const cloudTrailAccessorSuffix = new random.Id(this, 'cloud-trail-acessor-suffix', {
-      byteLength: 8
+    const cloudTrailAccessorSuffix = new Id(this, 'cloud-trail-acessor-suffix', {
+      byteLength: 8,
     });
 
-    const cloudTrailAccessor = new iam.IamRole(this, 'aiaa-cloud-trail-accessor', {
+    const cloudTrailAccessor = new IamRole(this, 'aiaa-cloud-trail-accessor', {
       name: `aiaa-cloud-trail-accessor-${cloudTrailAccessorSuffix.hex}`,
       assumeRolePolicy: JSON.stringify({
-        Version: "2012-10-17",
+        Version: '2012-10-17',
         Statement: [
           {
-            Effect: "Allow",
+            Effect: 'Allow',
             Principal: {
-              Service: "access-analyzer.amazonaws.com"
+              Service: 'access-analyzer.amazonaws.com',
             },
-            Action: "sts:AssumeRole"
-          }
-        ]
+            Action: 'sts:AssumeRole',
+          },
+        ],
       }),
-      inlinePolicy: [{
-        name: 'cloudTrailAccess',
-        policy: JSON.stringify({
-          Version: "2012-10-17",
-          Statement: [
-            {
-              Action: "cloudtrail:GetTrail",
-              Resource: "*",
-              Effect: "Allow"
-            },
-            {
-              Action: [
-                "iam:GenerateServiceLastAccessedDetails",
-                "iam:GetServiceLastAccessedDetails"
-              ],
-              Resource: "*",
-              Effect: "Allow"
-            },
-            {
-              Action: [
-                "s3:GetObject",
-                "s3:ListBucket"
-              ],
-              Resource: "*",
-              Effect: "Allow"
-            }
-          ]
-        })
-      }]
+      inlinePolicy: [
+        {
+          name: 'cloudTrailAccess',
+          policy: JSON.stringify({
+            Version: '2012-10-17',
+            Statement: [
+              {
+                Action: 'cloudtrail:GetTrail',
+                Resource: '*',
+                Effect: 'Allow',
+              },
+              {
+                Action: ['iam:GenerateServiceLastAccessedDetails', 'iam:GetServiceLastAccessedDetails'],
+                Resource: '*',
+                Effect: 'Allow',
+              },
+              {
+                Action: ['s3:GetObject', 's3:ListBucket'],
+                Resource: '*',
+                Effect: 'Allow',
+              },
+            ],
+          }),
+        },
+      ],
     });
 
-    const flowRoleId = new random.Id(this, 'flow-role-id', {
-      byteLength: 8
+    const flowRoleId = new Id(this, 'flow-role-id', {
+      byteLength: 8,
     });
 
-    const flowRole = new iam.IamRole(this, 'flow-role', {
+    const flowRole = new IamRole(this, 'flow-role', {
       name: `aiaa-flow-role-${flowRoleId.hex}`,
       assumeRolePolicy: JSON.stringify(sfnRolePolicy),
-      inlinePolicy: [{
-        name: 'flowPolicy',
-        policy: JSON.stringify({
-          Version: "2012-10-17",
-          Statement: [
-            {
-              Action: "lambda:InvokeFunction",
-              Resource: provideContextFunc.arn,
-              Effect: "Allow"
-            },
-            {
-              Action: "AccessAnalyzer:startPolicyGeneration",
-              Resource: `arn:aws:access-analyzer:${region.stringValue}:${accountId.stringValue}:*`,
-              Effect: "Allow"
-            },
-            {
-              Action: "AccessAnalyzer:getGeneratedPolicy",
-              Resource: `arn:aws:access-analyzer:${region.stringValue}:${accountId.stringValue}:*`,
-              Effect: "Allow"
-            },
-            {
-              Action: "s3:putObject",
-              Resource: `${dataBucket.arn}/*`,
-              Effect: "Allow"
-            },
-            {
-              Action: "iam:PassRole",
-              Resource: `${cloudTrailAccessor.arn}`,
-              Effect: "Allow"
-            },
-            {
-              Action: [
-                "s3:DeleteObject*",
-                "s3:PutObject",
-                "s3:Abort*"
-              ],
-              Resource: [
-                `${dataBucket.arn}`,
-                `${dataBucket.arn}/*`,
-              ],
-              Effect: "Allow"
-            },
-            {
-              Action: [
-                "access-analyzer:StartPolicyGeneration",
-                "access-analyzer:GetGeneratedPolicy"
-              ],
-              Resource: `arn:aws:access-analyzer:${region.stringValue}:${accountId.stringValue}:*`,
-              Effect: "Allow"
-            }
-          ]
-        })
-      }]
+      inlinePolicy: [
+        {
+          name: 'flowPolicy',
+          policy: JSON.stringify({
+            Version: '2012-10-17',
+            Statement: [
+              {
+                Action: 'lambda:InvokeFunction',
+                Resource: provideContextFunc.arn,
+                Effect: 'Allow',
+              },
+              {
+                Action: 'AccessAnalyzer:startPolicyGeneration',
+                Resource: `arn:aws:access-analyzer:${region.stringValue}:${accountId.stringValue}:*`,
+                Effect: 'Allow',
+              },
+              {
+                Action: 'AccessAnalyzer:getGeneratedPolicy',
+                Resource: `arn:aws:access-analyzer:${region.stringValue}:${accountId.stringValue}:*`,
+                Effect: 'Allow',
+              },
+              {
+                Action: 's3:putObject',
+                Resource: `${dataBucket.arn}/*`,
+                Effect: 'Allow',
+              },
+              {
+                Action: 'iam:PassRole',
+                Resource: `${cloudTrailAccessor.arn}`,
+                Effect: 'Allow',
+              },
+              {
+                Action: ['s3:DeleteObject*', 's3:PutObject', 's3:Abort*'],
+                Resource: [`${dataBucket.arn}`, `${dataBucket.arn}/*`],
+                Effect: 'Allow',
+              },
+              {
+                Action: ['access-analyzer:StartPolicyGeneration', 'access-analyzer:GetGeneratedPolicy'],
+                Resource: `arn:aws:access-analyzer:${region.stringValue}:${accountId.stringValue}:*`,
+                Effect: 'Allow',
+              },
+            ],
+          }),
+        },
+      ],
     });
 
-    const flowId = new random.Id(this, 'aiaa-flow-id', {
-      byteLength: 8
+    const flowId = new Id(this, 'aiaa-flow-id', {
+      byteLength: 8,
     });
 
-    const flow = new sfn.SfnStateMachine(this, 'aiaa-flow', {
+    const flow = new SfnStateMachine(this, 'aiaa-flow', {
       name: `aiaa-flow-${flowId.hex}`,
       roleArn: flowRole.arn,
       definition: `{
@@ -492,153 +496,164 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
             "ItemsPath": "$.RoleArns"
           }
         }
-      }`      
+      }`,
     });
 
-    const flowInvokerRoleId = new random.Id(this, 'flow-invoker-role-id', {
-      byteLength: 8
+    const flowInvokerRoleId = new Id(this, 'flow-invoker-role-id', {
+      byteLength: 8,
     });
 
-    const flowInvokerRole = new iam.IamRole(this, 'flow-invoker-role', {
+    const flowInvokerRole = new IamRole(this, 'flow-invoker-role', {
       name: `flow-invoker-role-${flowInvokerRoleId.hex}`,
       assumeRolePolicy: JSON.stringify({
-        Version: "2012-10-17",
+        Version: '2012-10-17',
         Statement: [
           {
-            Effect: "Allow",
+            Effect: 'Allow',
             Principal: {
-              Service: "events.amazonaws.com"
+              Service: 'events.amazonaws.com',
             },
-            Action: "sts:AssumeRole"
-          }
-        ]
+            Action: 'sts:AssumeRole',
+          },
+        ],
       }),
-      inlinePolicy: [{
-        name: 'invokeSfn',
-        policy: JSON.stringify({
-          Version: '2012-10-17',
-          Statement: [{
-            Action: 'states:StartExecution',
-            Resource: flow.arn,
-            Effect: 'Allow'
-          }]
-        })
-      }]
+      inlinePolicy: [
+        {
+          name: 'invokeSfn',
+          policy: JSON.stringify({
+            Version: '2012-10-17',
+            Statement: [
+              {
+                Action: 'states:StartExecution',
+                Resource: flow.arn,
+                Effect: 'Allow',
+              },
+            ],
+          }),
+        },
+      ],
     });
 
-    const flowRuleName = new random.Id(this, 'flow-rule-name', {
-      byteLength: 8
+    const flowRuleName = new Id(this, 'flow-rule-name', {
+      byteLength: 8,
     });
 
-    const rule = new eventbridge.CloudwatchEventRule(this, 'flow-rule', {
+    const rule = new CloudwatchEventRule(this, 'flow-rule', {
       name: `aiaa-flow-rule-${flowRuleName.hex}`,
       scheduleExpression: sched.stringValue,
     });
 
-    new eventbridge.CloudwatchEventTarget(this, 'flow-rule-target', {
+    new CloudwatchEventTarget(this, 'flow-rule-target', {
       rule: rule.name,
       roleArn: flowInvokerRole.arn,
       arn: flow.arn,
       input: JSON.stringify({
         RoleArns: [roleArns.stringValue],
         CloudTrailDetails: {
-          CloudTrailArn: trailArn.stringValue
-        }
-      })
+          CloudTrailArn: trailArn.stringValue,
+        },
+      }),
     });
 
-    const bucketPermission = new lambdafunction.LambdaPermission(this, 'bucket-lambda-permission', {
+    const bucketPermission = new LambdaPermission(this, 'bucket-lambda-permission', {
       statementId: 'AllowExecutionFromS3Bucket',
       action: 'lambda:InvokeFunction',
       functionName: pushPoliciesToRepoFunc.arn,
       principal: 's3.amazonaws.com',
       sourceArn: dataBucket.arn,
-      sourceAccount: accountId.stringValue
+      sourceAccount: accountId.stringValue,
     });
 
-    new s3.S3BucketNotification(this, 'bucket-notification', {
+    new S3BucketNotification(this, 'bucket-notification', {
       bucket: dataBucket.bucket,
-      lambdaFunction: [{
-        events: ["s3:ObjectCreated:*"],
-        lambdaFunctionArn: pushPoliciesToRepoFunc.arn
-      }],
-      dependsOn: [
-        bucketPermission
-      ]
+      lambdaFunction: [
+        {
+          events: ['s3:ObjectCreated:*'],
+          lambdaFunctionArn: pushPoliciesToRepoFunc.arn,
+        },
+      ],
+      dependsOn: [bucketPermission],
     });
 
     new TerraformOutput(this, 'pushpoliciestoreponame', {
-      value: pushPoliciesToRepoFunc.functionName
+      value: pushPoliciesToRepoFunc.functionName,
     });
 
     new TerraformOutput(this, 'providecontextname', {
-      value: provideContextFunc.functionName
+      value: provideContextFunc.functionName,
     });
 
     new TerraformOutput(this, 'flowName', {
-      value: flow.name
+      value: flow.name,
     });
   }
 
-  pushS3Object(scope: Construct, idPrefix: string, config: {
-    assetConfig: S3AssetConfig,
-    bucket: string,
-    contentType?: string | undefined
-  }) {
-
+  // eslint-disable-next-line class-methods-use-this
+  pushS3Object(
+    scope: Construct,
+    idPrefix: string,
+    config: {
+      assetConfig: S3AssetConfig;
+      bucket: string;
+      contentType?: string | undefined;
+    }
+  ) {
     const asset = new TerraformAsset(scope, `${idPrefix}-asset`, {
       path: path.resolve(__dirname, config.assetConfig.path),
-      type: AssetType.FILE
+      type: AssetType.FILE,
     });
 
-    const s3Object = new s3.S3BucketObject(scope, `${idPrefix}-object`, {
+    const s3Object = new S3BucketObject(scope, `${idPrefix}-object`, {
       bucket: config.bucket,
       key: `${config.assetConfig.version}/${idPrefix}/${asset.fileName}`,
       source: asset.path,
-      contentType: config.contentType
+      contentType: config.contentType,
     });
 
     return s3Object;
   }
 
-  setupLambda(scope: Construct, idPrefix: string, config: {
-    lambda: LambdaFunctionConfig,
-    bucket: string,
-    environment?: lambdafunction.LambdaFunctionEnvironment,
-    inlinePolicy?: iam.IamRoleInlinePolicy[] | undefined
-  }) {
-
+  setupLambda(
+    scope: Construct,
+    idPrefix: string,
+    config: {
+      lambda: LambdaFunctionConfig;
+      bucket: string;
+      environment?: LambdaFunctionEnvironment;
+      inlinePolicy?: IamRoleInlinePolicy[] | undefined;
+    }
+  ) {
     const asset = new TerraformAsset(scope, `${idPrefix}-asset`, {
       path: path.resolve(__dirname, config.lambda.path),
-      type: AssetType.ARCHIVE
+      type: AssetType.ARCHIVE,
     });
 
-    const archive = new s3.S3BucketObject(scope, `${idPrefix}-archive`, {
+    const archive = new S3BucketObject(scope, `${idPrefix}-archive`, {
       bucket: config.bucket,
       key: `${config.lambda.version}/${idPrefix}/${asset.fileName}`,
-      source: asset.path
+      source: asset.path,
     });
 
-    const roleId = new random.Id(this, `${idPrefix}-role-name-suffix`, {
-      byteLength: 8
+    const roleId = new Id(this, `${idPrefix}-role-name-suffix`, {
+      byteLength: 8,
     });
 
-    const role = new iam.IamRole(scope, `${idPrefix}-role`, {
+    const role = new IamRole(scope, `${idPrefix}-role`, {
       name: `${idPrefix}-role-${roleId.hex}`,
       assumeRolePolicy: JSON.stringify(lambdaRolePolicy),
-      inlinePolicy: config.inlinePolicy
+      inlinePolicy: config.inlinePolicy,
     });
 
-    new iam.IamRolePolicyAttachment(scope, `${idPrefix}-attachment`, {
+    new IamRolePolicyAttachment(scope, `${idPrefix}-attachment`, {
       policyArn: 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole',
-      role: role.name
+      role: role.name,
     });
 
-    const funcId = new random.Id(this, `${idPrefix}-func-name-suffix`, {
-      byteLength: 8
+    const funcId = new Id(this, `${idPrefix}-func-name-suffix`, {
+      byteLength: 8,
     });
 
-    const func = new lambdafunction.LambdaFunction(scope, `${idPrefix}-func`, {
+    const func = new LambdaFunction(scope, `${idPrefix}-func`, {
       functionName: `${idPrefix}-func-${funcId.hex}`,
       s3Bucket: config.bucket,
       s3Key: archive.key,
@@ -646,7 +661,7 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
       runtime: config.lambda.runtime,
       timeout: 10,
       role: role.arn,
-      environment: config.environment
+      environment: config.environment,
     });
 
     return func;
@@ -655,36 +670,36 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
 
 const app = new App();
 
-new AutomatedIamAccessAnalyzerStack(app, "aiaa", {
+new AutomatedIamAccessAnalyzerStack(app, 'aiaa', {
   repo: {
     allowFile: {
       path: '../../repo/allow.json',
-      version: 'v1.0.0'
+      version: 'v1.0.0',
     },
     denyFile: {
       path: '../../repo/deny.json',
-      version: 'v1.0.0'
-    }
+      version: 'v1.0.0',
+    },
   },
   lambdas: {
     provideContext: {
       path: '../../lambdas/provide-context/dist',
       handler: 'index.handler',
       runtime: 'nodejs14.x',
-      version: 'v1.0.0'
+      version: 'v1.0.0',
     },
     pushPoliciesToRepositoryConfig: {
       path: '../../lambdas/push-policies-to-repository/dist',
-      handler: "index.handler",
-      runtime: "nodejs14.x",
-      version: 'v1.0.0'
+      handler: 'index.handler',
+      runtime: 'nodejs14.x',
+      version: 'v1.0.0',
     },
     initializeRepositoryConfig: {
       path: '../../lambdas/initialize-repository/dist',
-      handler: "index.handler",
-      runtime: "nodejs14.x",
-      version: 'v1.0.0'
-    }
-  }
+      handler: 'index.handler',
+      runtime: 'nodejs14.x',
+      version: 'v1.0.0',
+    },
+  },
 });
 app.synth();

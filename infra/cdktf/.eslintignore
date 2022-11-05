@@ -1,0 +1,8 @@
+node_modules
+__tests__
+cdktf.out
+.eslintrc.js
+.gen
+# ignore compiled files
+*.d.ts
+*.js

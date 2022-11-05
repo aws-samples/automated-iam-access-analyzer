@@ -1,8 +1,8 @@
-# Automated IAM Access Analyzer
+# Automated IAM Access Analyzer Role Generator
 
-Automated IAM Access Analyzer is a sample implementation of a periodical monitoring of an AWS IAM Role in order to achieve a continuous permission refinement of that role. The goal of the solution is to present an operational, continuous least-privilege approach for a particular role in order to provide for security proliferation in an ongoing manner.
+Automated IAM Access Analyzer Role Generator is a sample implementation of a periodical monitoring of an AWS IAM Role in order to achieve a continuous permission refinement of that role. The goal of the solution is to present an operational, continuous least-privilege approach for a particular role in order to provide for security proliferation in an ongoing manner.
 
-Automated IAM Access Analyzer relies on the [AWS CloudTrail](https://aws.amazon.com/cloudtrail/), [AWS IAM Access Analyzer for policy generation](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-generation.html), and [AWS Step Functions](https://aws.amazon.com/step-functions/) for orchestrating the overall process.
+Automated IAM Access Analyzer Role Generator relies on the [AWS CloudTrail](https://aws.amazon.com/cloudtrail/), [AWS IAM Access Analyzer for policy generation](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-generation.html), and [AWS Step Functions](https://aws.amazon.com/step-functions/) for orchestrating the overall process.
 
 ## Structure of the solution
 
@@ -30,14 +30,14 @@ npm install && lerna bootstrap
 4. Test & build the Lambda code
 
 ```
-lerna run test --scope @aiaa-lambda/*
-lerna run compile --scope @aiaa-lambda/*
-lerna run build:prod --scope @aiaa-lambda/*
+npm run test:code
+npm run build:code
+npm run pack:code
 ```
 
 5. Build the constructs
 ```
-lerna run build --scope @aiaa/*
+npm run build:infra
 ```
 
 ## Deploying the solution
