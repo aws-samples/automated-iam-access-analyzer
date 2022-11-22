@@ -114,8 +114,9 @@ cd infra/cdktf
 
 ```
 TF_VAR_accountId=<accountId> \
-TF_VAR_roleArn=<selected_role_arn> \
-TF_VAR_railArn=<trail_arn> \
+TF_VAR_region=<region> \
+TF_VAR_roleArns=<selected_role_arn> \
+TF_VAR_trailArn=<trail_arn> \
 TF_VAR_schedule=<schedule_expression> \
 [ TF_VAR_trailLookBack=<trail_look_back> ] \
 cdktf deploy

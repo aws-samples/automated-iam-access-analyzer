@@ -110,32 +110,28 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
 
     new RandomProvider(this, 'random', {});
 
-    const repoId = new Id(this, 'policy-repo-id', {
+    const id = new Id(this, 'stack-id', {
       byteLength: 8,
+      keepers: {
+        accountId: accountId.stringValue,
+        region: region.stringValue,
+      },
     });
 
     const mainBranchName = 'main';
 
     const repo = new CodecommitRepository(this, 'policy-repo', {
-      repositoryName: `aiaa-policy-repo-${repoId.hex}`,
+      repositoryName: `aiaa-policy-repo-${id.hex}`,
       defaultBranch: mainBranchName,
       description: 'A repository for polished policies in the Automated IAM ',
     });
 
-    const resourcesBucketSuffix = new Id(this, 'resources-bucket-suffix', {
-      byteLength: 8,
-    });
-
     const resourcesBucket = new S3Bucket(this, 'resources', {
-      bucket: `aiaa-resources-${resourcesBucketSuffix.hex}`,
-    });
-
-    const dataBucketSuffix = new Id(this, 'data-bucket-suffix', {
-      byteLength: 8,
+      bucket: `aiaa-resources-${id.hex}`,
     });
 
     const dataBucket = new S3Bucket(this, 'data-bucket', {
-      bucket: `aiaa-data-${dataBucketSuffix.hex}`,
+      bucket: `aiaa-data-${id.hex}`,
       versioning: {
         enabled: true,
       },
@@ -143,6 +139,7 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
 
     const pushPoliciesToRepoFunc = this.setupLambda(this, 'aiaa-push-policies-to-repo', {
       lambda: config.lambdas.pushPoliciesToRepositoryConfig,
+      id,
       bucket: resourcesBucket.bucket,
       environment: {
         variables: {
@@ -194,6 +191,7 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
 
     const initializeRepositoryFunc = this.setupLambda(this, 'aiaa-initialize-repo', {
       lambda: config.lambdas.initializeRepositoryConfig,
+      id,
       bucket: resourcesBucket.bucket,
       environment: {
         variables: {
@@ -245,6 +243,7 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
 
     const provideContextFunc = this.setupLambda(this, 'aiaa-provide-context', {
       lambda: config.lambdas.provideContext,
+      id,
       bucket: resourcesBucket.bucket,
       environment: {
         variables: {
@@ -253,12 +252,8 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
       },
     });
 
-    const cloudTrailAccessorSuffix = new Id(this, 'cloud-trail-acessor-suffix', {
-      byteLength: 8,
-    });
-
     const cloudTrailAccessor = new IamRole(this, 'aiaa-cloud-trail-accessor', {
-      name: `aiaa-cloud-trail-accessor-${cloudTrailAccessorSuffix.hex}`,
+      name: `aiaa-cloud-trail-accessor-${id.hex}`,
       assumeRolePolicy: JSON.stringify({
         Version: '2012-10-17',
         Statement: [
@@ -298,12 +293,8 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
       ],
     });
 
-    const flowRoleId = new Id(this, 'flow-role-id', {
-      byteLength: 8,
-    });
-
     const flowRole = new IamRole(this, 'flow-role', {
-      name: `aiaa-flow-role-${flowRoleId.hex}`,
+      name: `aiaa-flow-role-${id.hex}`,
       assumeRolePolicy: JSON.stringify(sfnRolePolicy),
       inlinePolicy: [
         {
@@ -352,12 +343,8 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
       ],
     });
 
-    const flowId = new Id(this, 'aiaa-flow-id', {
-      byteLength: 8,
-    });
-
     const flow = new SfnStateMachine(this, 'aiaa-flow', {
-      name: `aiaa-flow-${flowId.hex}`,
+      name: `aiaa-flow-${id.hex}`,
       roleArn: flowRole.arn,
       definition: `{
         "StartAt": "AutoIamAATestStackAaCtxProvider",
@@ -499,12 +486,8 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
       }`,
     });
 
-    const flowInvokerRoleId = new Id(this, 'flow-invoker-role-id', {
-      byteLength: 8,
-    });
-
     const flowInvokerRole = new IamRole(this, 'flow-invoker-role', {
-      name: `flow-invoker-role-${flowInvokerRoleId.hex}`,
+      name: `flow-invoker-role-${id.hex}`,
       assumeRolePolicy: JSON.stringify({
         Version: '2012-10-17',
         Statement: [
@@ -534,12 +517,8 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
       ],
     });
 
-    const flowRuleName = new Id(this, 'flow-rule-name', {
-      byteLength: 8,
-    });
-
     const rule = new CloudwatchEventRule(this, 'flow-rule', {
-      name: `aiaa-flow-rule-${flowRuleName.hex}`,
+      name: `aiaa-flow-rule-${id.hex}`,
       scheduleExpression: sched.stringValue,
     });
 
@@ -613,10 +592,12 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
     return s3Object;
   }
 
+  // eslint-disable-next-line class-methods-use-this
   setupLambda(
     scope: Construct,
     idPrefix: string,
     config: {
+      id: Id;
       lambda: LambdaFunctionConfig;
       bucket: string;
       environment?: LambdaFunctionEnvironment;
@@ -634,12 +615,8 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
       source: asset.path,
     });
 
-    const roleId = new Id(this, `${idPrefix}-role-name-suffix`, {
-      byteLength: 8,
-    });
-
     const role = new IamRole(scope, `${idPrefix}-role`, {
-      name: `${idPrefix}-role-${roleId.hex}`,
+      name: `${idPrefix}-role-${config.id.hex}`,
       assumeRolePolicy: JSON.stringify(lambdaRolePolicy),
       inlinePolicy: config.inlinePolicy,
     });
@@ -649,12 +626,8 @@ class AutomatedIamAccessAnalyzerStack extends TerraformStack {
       role: role.name,
     });
 
-    const funcId = new Id(this, `${idPrefix}-func-name-suffix`, {
-      byteLength: 8,
-    });
-
     const func = new LambdaFunction(scope, `${idPrefix}-func`, {
-      functionName: `${idPrefix}-func-${funcId.hex}`,
+      functionName: `${idPrefix}-func-${config.id.hex}`,
       s3Bucket: config.bucket,
       s3Key: archive.key,
       handler: config.lambda.handler,
