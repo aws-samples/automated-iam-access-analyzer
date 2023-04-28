@@ -27,7 +27,7 @@
     "@tsconfig/node14": "^1.0.3",
     "@types/aws-lambda": "^8.10.114",
     "@types/jest": "^29.5.1",
-    "@types/node": "^18.16.0",
+    "@types/node": "^18.16.2",
     "@typescript-eslint/eslint-plugin": "^5.59.1",
     "@typescript-eslint/parser": "^5.59.1",
     "eslint": "^8.39.0",
@@ -39,7 +39,7 @@
     "typescript": "^5.0.4"
   },
   "dependencies": {
-    "@aws-sdk/client-codecommit": "^3.319.0",
-    "@aws-sdk/client-s3": "^3.319.0"
+    "@aws-sdk/client-codecommit": "^3.321.1",
+    "@aws-sdk/client-s3": "^3.321.1"
   }
 }
